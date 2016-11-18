@@ -61,7 +61,7 @@
                         </FlowPane>
                      </children>
                   </HBox>
-                  <Label fx:id="lblPlayerPos1" />
+                  <Label fx:id="lblPlayerPos1" text="Player 1" />
                </children>
             </GridPane>
          </children>
@@ -88,12 +88,25 @@
                         <Button id="btnDeal" mnemonicParsing="false" onAction="#btnDeal_Click" prefWidth="100.0" text="Deal" />
                      </children>
                   </HBox>
-                  <Button id="btnGetState" mnemonicParsing="false" onAction="#GetGameState" prefWidth="100.0" text="Get State" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                   <ImageView fitHeight="41.0" fitWidth="61.0" pickOnBounds="true" preserveRatio="true">
                      <image>
                         <Image url="@../../../../resources/img/b2fh.png" />
                      </image>
                   </ImageView>
+                  <HBox fx:id="hboxCommunity" prefHeight="100.0" prefWidth="200.0" GridPane.columnIndex="1" />
+                  <GridPane GridPane.columnIndex="1" GridPane.rowIndex="2">
+                    <columnConstraints>
+                      <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                      <ColumnConstraints hgrow="SOMETIMES" minWidth="10.0" prefWidth="100.0" />
+                    </columnConstraints>
+                    <rowConstraints>
+                      <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
+                    </rowConstraints>
+                     <children>
+                        <Label fx:id="lblWinningPlayer" text="Winner" />
+                        <Label fx:id="lblWinningHand" text="Win Hand" GridPane.columnIndex="1" />
+                     </children>
+                  </GridPane>
                </children>
             </GridPane>
             <Label id="lblNumberOfPlayers" fx:id="lblNumberOfPlayers" layoutX="28.0" layoutY="27.0" prefHeight="21.0" prefWidth="127.0" />
@@ -154,7 +167,7 @@
                               <Image url="@../../../../resources/img/d-button.png" />
                            </image>
                         </ImageView>
-                        <Label id="lblPlayerPos2" fx:id="lblPlayerPos2" text="Label" />
+                        <Label id="lblPlayerPos2" fx:id="lblPlayerPos2" text="Player 2" />
                      </children>
                   </HBox>
                </children>
@@ -193,7 +206,7 @@
                               <Button id="btnPlayer1Fold" maxWidth="100.0" minWidth="75.0" mnemonicParsing="false" prefWidth="80.0" text="Raise" GridPane.columnIndex="1" GridPane.rowIndex="2" />
                               <Button maxWidth="100.0" mnemonicParsing="false" prefWidth="80.0" text="Bet" GridPane.rowIndex="2" />
                               <Button id="btnPlayer4Check" maxWidth="100.0" minWidth="75.0" mnemonicParsing="false" onAction="#btnCheck_Click" prefWidth="93.0" text="Check" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-                              <Label id="lblPlayerPos4" fx:id="lblPlayerPos4" />
+                              <Label id="lblPlayerPos4" fx:id="lblPlayerPos4" text="Player 4" />
                            </children>
                         </GridPane>
                      </children>
@@ -260,11 +273,7 @@
                         </ImageView>
                      </children>
                   </HBox>
-                  <HBox id="txtPlayer1Name" prefHeight="100.0" prefWidth="200.0" GridPane.rowIndex="1">
-                     <children>
-                        <Label id="txtPos1Name" fx:id="lblPos1Name1" />
-                     </children>
-                  </HBox>
+                  <HBox id="txtPlayer1Name" prefHeight="100.0" prefWidth="200.0" GridPane.rowIndex="1" />
                   <HBox prefHeight="100.0" prefWidth="200.0" GridPane.rowIndex="2">
                      <children>
                         <FlowPane prefHeight="11.0" prefWidth="130.0">
@@ -279,7 +288,7 @@
                         </FlowPane>
                      </children>
                   </HBox>
-                  <Label id="lblPlayerPos3" fx:id="lblPlayerPos3" />
+                  <Label id="lblPlayerPos3" fx:id="lblPlayerPos3" text="Player 3" />
                </children>
             </GridPane>
          </children>

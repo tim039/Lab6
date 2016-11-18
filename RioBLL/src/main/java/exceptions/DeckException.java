@@ -3,6 +3,8 @@
  */
 package exceptions;
 
+import java.io.Serializable;
+
 import pokerBase.Deck;
 import pokerEnums.eDeckExceptionType;
 import pokerEnums.eHandExceptionType;
@@ -11,7 +13,7 @@ import pokerEnums.eHandExceptionType;
  * @author Bert.Gibbons
  *
  */
-public class DeckException extends Exception {
+public class DeckException extends Exception implements Serializable  {
 
 	private Deck d;
 	private eDeckExceptionType eT;

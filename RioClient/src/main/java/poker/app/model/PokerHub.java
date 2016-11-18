@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 import exceptions.DeckException;
+import exceptions.HandException;
 import netgame.common.Hub;
 import pokerBase.Action;
 import pokerBase.Card;
@@ -21,6 +22,7 @@ import pokerBase.Rule;
 import pokerBase.Table;
 import pokerEnums.eAction;
 import pokerEnums.eCardDestination;
+import pokerEnums.eDeckExceptionType;
 import pokerEnums.eDrawCount;
 import pokerEnums.eGame;
 import pokerEnums.eGameState;
@@ -30,7 +32,6 @@ public class PokerHub extends Hub {
 	private Table HubPokerTable = new Table();
 	private GamePlay HubGamePlay;
 	private int iDealNbr = 0;
-	private eGameState eGameState;
 
 	public PokerHub(int port) throws IOException {
 		super(port);
@@ -51,57 +52,101 @@ public class PokerHub extends Hub {
 
 		if (message instanceof Action) {
 			Player actPlayer = (Player) ((Action) message).getPlayer();
-			Action act = (Action)message;
-			switch (act.getAction())
-			{
+			Action act = (Action) message;
+			switch (act.getAction()) {
 			case Sit:
 				HubPokerTable.AddPlayerToTable(actPlayer);
 				resetOutput();
-				sendToAll(HubPokerTable);				
+				sendToAll(HubPokerTable);
 				break;
 			case Leave:
 				HubPokerTable.RemovePlayerFromTable(actPlayer);
 				resetOutput();
-				sendToAll(HubPokerTable);				
+				sendToAll(HubPokerTable);
 				break;
 			case TableState:
 				resetOutput();
-				sendToAll(HubPokerTable);				
+				sendToAll(HubPokerTable);
 				break;
 			case StartGame:
-				//	TODO: Set HubGamePlay = new instance of GamePlay
-				
+				// Get the rule from the Action object.
 				Rule rle = new Rule(act.geteGame());
-				
-				//	TODO: - Finish this code 
-				//			HubGamePlay = new GamePlay(<parm>,<parm>,<parm>);
-				
-				
-				//	DO NOT BREAK... let it fall through to Draw so it will draw
-				//	the first cards of the game
-				
-				//	TODO: Add the players to the game based on who's sitting at the table
-				//			Call 'setGamePlayers' in GamePlay
-				
-				//	TODO: Pick a random player to be the dealer (between players playing)
-				
-				//	TODO: Set the deck in HubGamePlay based on game's rule set
-				
-				//	TODO: 
-			case Draw:
-				
-				//	TODO: Draw cards based on next in hmCardDraw
-				//			You might have to draw two cards, one card, three cards
-				
-				//			You might have to add cards to player(s) hands, community
+				// Start the new instance of GamePlay
+				Player pDealer = HubPokerTable.PickRandomPlayerAtTable();
 
-				//	TODO: Update eDrawCountLast in GamePlay.  This attribute will 
-				//		tell the client what card(s) need to be dealt to which players.
+				HubGamePlay = new GamePlay(rle, pDealer.getPlayerID());
+				// Add Players to Game
+				HubGamePlay.setGamePlayers(HubPokerTable.getHashPlayers());
+				// Set the order of players
+				HubGamePlay.setiActOrder(GamePlay.GetOrder(pDealer.getiPlayerPosition()));
+
+
+			case Draw:
+
+				HubGamePlay
+						.seteDrawCountLast(eDrawCount.geteDrawCount(HubGamePlay.geteDrawCountLast().getDrawNo() + 1));
+				HubGamePlay.seteGameState(eGameState.DRAW);
+				CardDraw cd = HubGamePlay.getRule().GetDrawCard(HubGamePlay.geteDrawCountLast());
+				int iCardsToDraw = cd.getCardCount().getCardCount();
+
+				if (cd.getCardDestination() == eCardDestination.Player) {
+					for (int i : HubGamePlay.getiActOrder()) {
+						Player p = HubGamePlay.getPlayerByPosition(i);
+						if (p != null) {
+							for (int iDraw = 0; iDraw < iCardsToDraw; iDraw++) {
+								try {
+									HubGamePlay.drawCard(p, cd.getCardDestination());
+								} catch (DeckException e) {
+									// Whoops! Exception was throw... send it
+									// back to the client
+									resetOutput();
+									sendToAll(e);
+									e.printStackTrace();
+									return;
+								}
+							}
+						}
+					}
+				} else if (cd.getCardDestination() == eCardDestination.Community) {
+					System.out.println("Community");
+					Player p = HubGamePlay.getPlayerCommon();
+					if (p != null) {
+						for (int iDraw = 0; iDraw < iCardsToDraw; iDraw++) {
+							try {
+								HubGamePlay.drawCard(p, cd.getCardDestination());
+							} catch (DeckException e) {
+								// Whoops! Exception was throw... send it
+								// back to the client
+								resetOutput();
+								sendToAll(e);
+								e.printStackTrace();
+								return;
+							}
+						}
+					}
+				}
+
+				HubGamePlay.isGameOver();
 				
 				resetOutput();
-				sendToAll(HubGamePlay);	
+				sendToAll(HubGamePlay);
 				break;
-			}			
+			case ScoreGame:
+				// Am I at the end of the game?
+				try {
+					HubGamePlay.ScoreGame();
+					HubGamePlay.seteGameState(eGameState.SCORED);
+				} catch (HandException e) {
+					resetOutput();
+					sendToAll(e);
+					e.printStackTrace();
+					return;
+				}
+				resetOutput();
+				sendToAll(HubGamePlay);
+				break;
+			}
+			
 		}
 
 	}

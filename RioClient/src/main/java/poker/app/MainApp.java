@@ -9,19 +9,26 @@ import javax.swing.SwingUtilities;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.Marshaller;
 
+import exceptions.DeckException;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.EventHandler;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.VBoxBuilder;
 import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.stage.Modality;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
@@ -275,6 +282,17 @@ public class MainApp extends Application {
 				else if (message instanceof GamePlay)
 				{
 					pokerController.Handle_GameState((GamePlay)message);
+				}
+				else if (message instanceof DeckException)
+				{
+					DeckException de = (DeckException)message;
+					
+					Stage dialogStage = new Stage();
+					dialogStage.initModality(Modality.WINDOW_MODAL);
+					dialogStage.setScene(new Scene(VBoxBuilder.create().
+					    children(new Text(de.geteT().toString()), new Button("Ok.")).
+					    alignment(Pos.CENTER).padding(new Insets(5)).build()));
+					dialogStage.show();
 				}
 				
 			});

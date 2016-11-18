@@ -1,26 +1,60 @@
 package pokerBase;
 
+import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
 
+import pokerEnums.eCardDestination;
 import pokerEnums.eCardNo;
+import pokerEnums.eDrawCount;
+import pokerEnums.eGame;
 import pokerEnums.eHandExceptionType;
 import pokerEnums.eHandStrength;
 import pokerEnums.eRank;
 import pokerEnums.eSuit;
 import exceptions.HandException;
+import org.apache.commons.math3.util.CombinatoricsUtils;
 
-public class Hand {
+public class Hand implements Serializable {
 
+	private UUID HandId;
+	private Player HandPlayer;
 	private ArrayList<Card> CardsInHand = new ArrayList<Card>();
 	private boolean bScored;
 	private HandScore hs;
 	private ArrayList<Hand> ExplodedHands = new ArrayList<Hand>();
+	private boolean bHandFolded = false;
+	private boolean bIsHandWinner = false;
 
-	 ArrayList<Card> getCardsInHand() {
+	
+
+	public Hand(Player handPlayer, UUID HandID) {
+		
+		this.HandId = (HandID == null) ? UUID.randomUUID() : HandID;		
+		this.HandPlayer = handPlayer;
+	}	
+	
+	 public UUID getHandId() {
+		return HandId;
+	}
+
+	public Player getHandPlayer() {
+		return HandPlayer;
+	}
+
+
+	public void setHandPlayer(Player handPlayer) {
+		HandPlayer = handPlayer;
+	}
+
+
+	public ArrayList<Card> getCardsInHand() {
 		return CardsInHand;
 	}
 
@@ -36,6 +70,119 @@ public class Hand {
 		return hs;
 	}
 
+	public boolean isbIsHandWinner() {
+		return bIsHandWinner;
+	}
+
+	public void setbIsHandWinner(boolean bIsHandWinner) {
+		this.bIsHandWinner = bIsHandWinner;
+	}
+	
+	public static Hand PickHandFromCombination(Player p, Hand PlayerHand, Hand CommonHand, GamePlay gme) throws HandException {
+
+		ArrayList<Hand> CombinHands = new ArrayList<Hand>();
+		int iPlayerNumberOfCards = gme.getRule().GetPlayerNumberOfCards();
+		int iPlayerCardsMin = gme.getRule().getPlayerCardsMin();
+		int iPlayerCardsMax = gme.getRule().getPlayerCardsMax();
+		int iCommonCardsMin = gme.getRule().getCommunityCardsMin();
+		int iCommonCardsMax = gme.getRule().getCommunityCardsMax();
+		
+		
+		for (int iPassPlayer = 0; iPassPlayer <= (iPlayerCardsMax - iPlayerCardsMin);iPassPlayer++)
+		{
+			Iterator iterPlayer = CombinatoricsUtils.combinationsIterator(iPlayerNumberOfCards, (iPlayerCardsMin + iPassPlayer));
+			while (iterPlayer.hasNext())				
+			{
+				int[] iPlayerCardsToPick = (int[]) iterPlayer.next();
+
+				if (iCommonCardsMax > 0)
+				{
+					Iterator iterCommon = CombinatoricsUtils.combinationsIterator(iCommonCardsMax, (iCommonCardsMax - iPlayerCardsToPick.length));
+					while (iterCommon.hasNext())
+					{
+						int[] iCommonCardsToPick = (int[]) iterCommon.next();
+						Hand h = new Hand(p, PlayerHand.getHandId());
+						for (int iPlayerArrayPos = 0; iPlayerArrayPos < iPlayerCardsToPick.length; iPlayerArrayPos++)
+						{						
+							h.AddToCardsInHand((Card) PlayerHand.getCardsInHand().get(iPlayerCardsToPick[iPlayerArrayPos]));
+						}
+						
+						for (int iCommonArrayPos = 0; iCommonArrayPos < iCommonCardsToPick.length; iCommonArrayPos++)
+						{
+							h.AddToCardsInHand((Card) CommonHand.getCardsInHand().get(iCommonCardsToPick[iCommonArrayPos]));
+						}				
+						CombinHands.add(h);
+					}						
+				}
+				else if (iCommonCardsMax == 0)
+				{
+					Hand h = new Hand(p, PlayerHand.getHandId());
+					for (int iPlayerArrayPos = 0; iPlayerArrayPos < iPlayerCardsToPick.length; iPlayerArrayPos++)
+					{
+						h.AddToCardsInHand((Card) PlayerHand.getCardsInHand().get(iPlayerCardsToPick[iPlayerArrayPos]));
+					}
+					CombinHands.add(h);
+				}
+			}			
+		}
+
+		//	Evaluate each hand (why not?)
+		ArrayList<Hand> ScoredHands = new ArrayList<Hand>();
+		for (Hand h : CombinHands) {
+			try {
+				h = Hand.EvaluateHand(h);
+				ScoredHands.add(h);
+			} catch (HandException e) {
+				System.out.println("Exception thrown");
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		return PickBestHand(ScoredHands);		
+	}
+
+	public ArrayList<Card> GetCardsDrawn(eDrawCount eDrawCount, eGame eGame, eCardDestination eCardDestination)
+	{
+		int iStartCard = 0;
+		int iStartCardCommon = 0;
+		int iCardCount = 0;
+		Rule rle = new Rule(eGame);
+		ArrayList<Card> CardsDrawn = new ArrayList<Card>();
+		
+		for (eDrawCount eDraw : eDrawCount.values()) {			
+			iCardCount= rle.GetDrawCard(eDraw) != null ?  rle.GetDrawCard(eDraw).getCardCount().getCardCount() : 0;			
+			if (eDraw == eDrawCount)
+			{
+				break;
+			}
+			if (rle.GetDrawCard(eDraw) != null)
+			{
+				if (rle.GetDrawCard(eDraw).getCardDestination()  == eCardDestination.Community)
+				{
+					iStartCardCommon += rle.GetDrawCard(eDraw).getCardCount().getCardCount();
+				}
+				else if  (rle.GetDrawCard(eDraw).getCardDestination() == eCardDestination.Player)
+				{
+					iStartCard += rle.GetDrawCard(eDraw).getCardCount().getCardCount();
+				}
+			}
+		}		
+		
+		for (int iCard = 0;iCard < iCardCount;iCard++)
+		{
+			if (eCardDestination == eCardDestination.Community)
+			{
+				CardsDrawn.add(CardsInHand.get(iCard + iStartCardCommon));
+			}
+			else if  (eCardDestination == eCardDestination.Player)
+			{				
+				CardsDrawn.add(CardsInHand.get(iCard + iStartCard));	
+			}			
+		}		
+		return CardsDrawn;
+	}
+	
 	public void EvaluateHand() {
 		try {
 			Hand h = EvaluateHand(this);
@@ -66,7 +213,7 @@ public class Hand {
 
 		ArrayList<Hand> ExplodedHands = new ArrayList<Hand>();
 
-		ExplodedHands = ExplodeHands(h);
+		ExplodedHands = ExplodeHands(h, h.getHandPlayer());
 
 		for (Hand hEval : ExplodedHands) {
 
@@ -131,16 +278,16 @@ public class Hand {
 	 * @param hs
 	 * @return
 	 */
-	public  static ArrayList<Hand> ExplodeHands(Hand h) {
+	public  static ArrayList<Hand> ExplodeHands(Hand h, Player p) {
 
         ArrayList<Hand> ReturnHands = new ArrayList<Hand>();
         ReturnHands.add(h);
         for (int iCard = 0; iCard < 5; iCard++) {
-            ReturnHands = SubstituteCard(iCard, ReturnHands);
+            ReturnHands = SubstituteCard(iCard, ReturnHands, p);
         }
         return ReturnHands;
     }
-	private static ArrayList<Hand> SubstituteCard(int iCardSub, ArrayList<Hand> hands) {
+	private static ArrayList<Hand> SubstituteCard(int iCardSub, ArrayList<Hand> hands, Player p) {
         ArrayList<Hand> CreatedHands = new ArrayList<Hand>();
         Deck CreatedDeck = new Deck();
 
@@ -148,7 +295,7 @@ public class Hand {
             if ((h.getCardsInHand().get(iCardSub).isWild() == true)
                     || (h.getCardsInHand().get(iCardSub).geteSuit() == eSuit.JOKER)) {
                 for (Card JokerDeckCard : CreatedDeck.getDeckCards()) {
-                    Hand CreatedHand = new Hand();
+                    Hand CreatedHand = new Hand(p, h.getHandId());
                     for (int iCard = 0; iCard < 5; iCard++) {
                         if (iCardSub == iCard) {
                             CreatedHand.AddToCardsInHand(JokerDeckCard);
@@ -159,7 +306,7 @@ public class Hand {
                     CreatedHands.add(CreatedHand);
                 }
             } else {
-                Hand CreatedHand = new Hand();
+                Hand CreatedHand = new Hand(p, h.getHandId());
                 for (int iCard = 0; iCard < 5; iCard++) {
                     CreatedHand.AddToCardsInHand(h.getCardsInHand().get(iCard));
                 }
@@ -517,7 +664,16 @@ public class Hand {
 		hs.setKickers(kickers);
 		return true;
 	}
-    public static Comparator<Hand> HandRank = new Comparator<Hand>() {
+	
+    public boolean isbHandFolded() {
+		return bHandFolded;
+	}
+
+	public void setbHandFolded(boolean bHandFolded) {
+		this.bHandFolded = bHandFolded;
+	}
+
+	public static Comparator<Hand> HandRank = new Comparator<Hand>() {
 
         public int compare(Hand h1, Hand h2) {
 

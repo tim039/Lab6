@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import pokerEnums.eCardCount;
@@ -25,7 +26,7 @@ public class Rule implements Serializable {
 		private int CommunityCardsMax;
 		private int PossibleHandCombinations;
 		private ArrayList<Card> WildCards = new ArrayList<Card>();
-		private HashMap hmCardDraw = new HashMap<Integer, CardDraw>();
+		private TreeMap hmCardDraw = new TreeMap<Integer, CardDraw>();
 		
 		private LinkedList<CardDraw> CardDraw = new LinkedList<CardDraw>();
 		private eGame Game;
@@ -52,7 +53,7 @@ public class Rule implements Serializable {
 			case FiveStudOneJoker: {
 				this.MaxNumberOfPlayers = 4;
 				this.PlayerNumberOfCards = 5;
-				this.NumberOfJokers = 21;
+				this.NumberOfJokers = 1;
 				this.PlayerCardsMin = 5;
 				this.PlayerCardsMax = 5;			
 				this.CommunityCardsMin = 0;
@@ -270,4 +271,10 @@ public class Rule implements Serializable {
 			CardDraw cd = (CardDraw) hmCardDraw.get(eDrawCount);			
 			return cd;			
 		}
+		public int GetMaxDrawCount()
+		{
+			return hmCardDraw.size();
+		}
+		
+		
 }

@@ -1,14 +1,17 @@
 package poker.app.view;
 
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.UUID;
 
 import javafx.animation.FadeTransition;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Bounds;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
@@ -20,12 +23,21 @@ import javafx.scene.layout.HBox;
 import javafx.util.Duration;
 import poker.app.MainApp;
 import pokerBase.Action;
+import pokerBase.Card;
+import pokerBase.CardDraw;
 import pokerBase.GamePlay;
+import pokerBase.Hand;
+import pokerBase.HandScore;
 import pokerBase.Player;
 import pokerBase.Table;
 import pokerEnums.eAction;
+import pokerEnums.eCardDestination;
+import pokerEnums.eDrawCount;
 import pokerEnums.eGame;
+import pokerEnums.eGameState;
+import pokerEnums.eHandStrength;
 import pokerEnums.ePlayerPosition;
+import pokerEnums.eRank;
 
 public class PokerTableController implements Initializable {
 
@@ -34,6 +46,11 @@ public class PokerTableController implements Initializable {
 
 	public PokerTableController() {
 	}
+
+	@FXML
+	private Label lblWinningPlayer;
+	@FXML
+	private Label lblWinningHand;
 
 	@FXML
 	private Label lblPlayerPos1;
@@ -92,6 +109,8 @@ public class PokerTableController implements Initializable {
 	private HBox hboxP3Cards;
 	@FXML
 	private HBox hboxP4Cards;
+	@FXML
+	private HBox hboxCommunity;
 
 	@Override
 	public void initialize(URL location, ResourceBundle resources) {
@@ -102,6 +121,10 @@ public class PokerTableController implements Initializable {
 		lblPlayerPos2.setText("2");
 		lblPlayerPos3.setText("3");
 		lblPlayerPos4.setText("4");
+
+		lblWinningPlayer.setText("");
+		lblWinningHand.setText("");
+
 	}
 
 	public void setMainApp(MainApp mainApp) {
@@ -182,6 +205,23 @@ public class PokerTableController implements Initializable {
 		default:
 			return null;
 		}
+	}
+
+	private HBox getCardHBox(int iPosition) {
+		switch (iPosition) {
+		case 0:
+			return hboxCommunity;
+		case 1:
+			return hboxP1Cards;
+		case 2:
+			return hboxP2Cards;
+		case 3:
+			return hboxP3Cards;
+		case 4:
+			return hboxP4Cards;
+		default:
+			return null;
+		}
 
 	}
 
@@ -207,66 +247,154 @@ public class PokerTableController implements Initializable {
 			}
 		}
 
-		//	Note: Players have been seated, set the Sit/Leave text
-		//	based on players already seated.
-		
+		// Note: Players have been seated, set the Sit/Leave text
+		// based on players already seated.
+
 		for (int a = 1; a < 5; a++) {
 
 			if (getPlayerLabel(a).getText() == "") {
 				if (bSeated) {
 					getSitLeave(a).setVisible(false);
-				}
-				else
-				{
+				} else {
 					getSitLeave(a).setVisible(true);
 					getSitLeave(a).setText("Sit");
 				}
 			}
 		}
-	}	
-	
-	
+	}
+
 	public void Handle_GameState(GamePlay HubPokerGame) {
-		//TODO: Deal the cards to the client(s)
+		// TODO: Deal the cards to the client(s)
+
+		GamePlay.StateOfGamePlay(HubPokerGame);
+
+		eDrawCount eDrawCnt = HubPokerGame.geteDrawCountLast();
+
+		if (eDrawCnt == eDrawCount.FIRST) {
+			hboxP1Cards.getChildren().clear();
+			hboxP2Cards.getChildren().clear();
+			hboxP3Cards.getChildren().clear();
+			hboxP4Cards.getChildren().clear();
+			hboxCommunity.getChildren().clear();
+			lblWinningPlayer.setText("");
+			lblWinningHand.setText("");
+		}
+
+		System.out.println("State of game: " + HubPokerGame.geteGameState());
+		CardDraw cd = HubPokerGame.getRule().GetDrawCard(eDrawCnt);
+
+		ImageView ivDealtCard = null;
+		
+		Hand hcheck = HubPokerGame.getPlayerHand(mainApp.getPlayer());
+		for (Card c : hcheck.getCardsInHand()) {
+			System.out.println(c.geteRank() + " " + c.geteSuit());
+		}
+
+		if (HubPokerGame.geteGameState() != eGameState.SCORED) {
+			if (cd.getCardDestination() == eCardDestination.Player) {
+				Iterator it = HubPokerGame.getGamePlayers().entrySet().iterator();
+				while (it.hasNext()) {
+					Map.Entry pair = (Map.Entry) it.next();
+					Player p = HubPokerGame.getGamePlayer(UUID.fromString(pair.getKey().toString()));
+					Hand h = HubPokerGame.getPlayerHand(p);
+					ArrayList<Card> cardsDrawn = h.GetCardsDrawn(eDrawCnt, HubPokerGame.getRule().GetGame(),
+							eCardDestination.Player);
+					for (Card c : cardsDrawn) {
+						if (p.getPlayerID().equals(mainApp.getPlayer().getPlayerID())) {
+							this.getCardHBox(p.getiPlayerPosition()).getChildren().add(BuildImage(c.getiCardNbr()));
+							
+							System.out.println("HBox");
+							HBox hb = this.getCardHBox(p.getiPlayerPosition());
+							Bounds bndCardDealt2 = hb.localToScene(hb.getBoundsInLocal());
+							System.out.println("x:" + bndCardDealt2.getMinX());
+							System.out.println("y:" + bndCardDealt2.getMinY());	
+							
+							int iCnt = 0;
+							for (Object o: this.getCardHBox(p.getiPlayerPosition()).getChildren())
+							{
+								System.out.println("ImageView : " + iCnt++);
+								ImageView iv  = (ImageView)o;
+								Bounds bndCardDealt = iv.localToScene(iv.getBoundsInLocal());
+								System.out.println("x:" + bndCardDealt.getMinX());
+								System.out.println("y:" + bndCardDealt.getMinY());								
+							}
+							
+							
+							//ivDealtCard = (ImageView)this.getCardHBox(p.getiPlayerPosition()).getChildren().get(this.getCardHBox(p.getiPlayerPosition()).getChildren().size() -1);
+							
+
+
+							
+							
+							
+							
+						} else {
+							this.getCardHBox(p.getiPlayerPosition()).getChildren().add(BuildImage(0));
+							ivDealtCard = (ImageView)this.getCardHBox(p.getiPlayerPosition()).getChildren().get(this.getCardHBox(p.getiPlayerPosition()).getChildren().size() -1);							
+						}
+					}
+				}
+			} else if (cd.getCardDestination() == eCardDestination.Community) {
+				Player p = HubPokerGame.getPlayerCommon();
+				Hand h = HubPokerGame.getGameCommonHand();
+				ArrayList<Card> cardsDrawn = h.GetCardsDrawn(eDrawCnt, HubPokerGame.getRule().GetGame(),
+						eCardDestination.Community);
+				for (Card c : cardsDrawn) {
+					this.getCardHBox(0).getChildren().add(BuildImage(c.getiCardNbr()));
+					ivDealtCard = (ImageView)this.getCardHBox(0).getChildren().get(this.getCardHBox(0).getChildren().size() -1);
+				}
+			}
+			
+
+		}
+
+		if (HubPokerGame.geteGameState() == eGameState.FINISHED) {
+			Action act = new Action(eAction.ScoreGame, mainApp.getPlayer());
+			// Send the Action to the Hub
+			mainApp.messageSend(act);
+		} else if (HubPokerGame.geteGameState() == eGameState.SCORED) {
+			lblWinningPlayer.setText(HubPokerGame.GetWinningHand().getHandPlayer().getPlayerName());
+			HandScore hs = HubPokerGame.GetWinningHand().getHandScore();
+			lblWinningHand.setText(eHandStrength.geteHandStrength(hs.getHandStrength()).toString() + " "
+					+ eRank.geteRank(hs.getHiHand()).toString());
+		}
+	}
+
+	private ImageView BuildImage(int iCardNbr) {
+		String strImgPath;
+		if (iCardNbr == 0) {
+			strImgPath = "/img/b2fv.png";
+		} else {
+			strImgPath = "/img/" + iCardNbr + ".png";
+		}
+
+		ImageView i1 = new ImageView(new Image(getClass().getResourceAsStream(strImgPath), 75, 75, true, true));
+		return i1;
 	}
 
 	@FXML
 	void btnStart_Click(ActionEvent event) {
-		//	Code is given...
 		// Start the Game
-		// Send the message to the hub
-		
-		Action act = new Action(eAction.StartGame,mainApp.getPlayer());
-		
-		//	figure out which game is selected in the menu
+		Action act = new Action(eAction.StartGame, mainApp.getPlayer());
+
+		// figure out which game is selected in the menu
 		eGame gme = eGame.getGame(Integer.parseInt(mainApp.getRuleName().replace("PokerGame", "")));
-		
-		//	Set the gme in the action
+
+		// Set the gme in the action
 		act.seteGame(gme);
-		
+
 		// Send the Action to the Hub
 		mainApp.messageSend(act);
 	}
 
 	@FXML
 	void btnDeal_Click(ActionEvent event) {
-		// Example - how to set card images in the HBOX
-		hboxP1Cards.getChildren().clear();
 
-		ImageView i1 = new ImageView(new Image(getClass().getResourceAsStream("/img/26.png"), 75, 75, true, true));
-		hboxP1Cards.getChildren().add(i1);
+		// Set the new Deal action
+		Action act = new Action(eAction.Draw, mainApp.getPlayer());
 
-		ImageView i2 = new ImageView(new Image(getClass().getResourceAsStream("/img/27.png"), 75, 75, true, true));
-		hboxP1Cards.getChildren().add(i2);
-
-		ImageView i3 = new ImageView(new Image(getClass().getResourceAsStream("/img/28.png"), 75, 75, true, true));
-		hboxP1Cards.getChildren().add(i3);
-
-		ImageView i4 = new ImageView(new Image(getClass().getResourceAsStream("/img/29.png"), 75, 75, true, true));
-		hboxP1Cards.getChildren().add(i4);
-
-		ImageView i5 = new ImageView(new Image(getClass().getResourceAsStream("/img/30.png"), 75, 75, true, true));
-		hboxP1Cards.getChildren().add(i5);
+		// Send the Action to the Hub
+		mainApp.messageSend(act);
 
 	}
 
