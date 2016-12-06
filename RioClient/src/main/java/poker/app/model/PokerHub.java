@@ -73,7 +73,7 @@ public class PokerHub extends Hub {
 				// Get the rule from the Action object.
 				Rule rle = new Rule(act.geteGame());
 				// Start the new instance of GamePlay
-				//resetOutput();
+				
 				Player pDealer = HubPokerTable.PickRandomPlayerAtTable();
 
 				HubGamePlay = new GamePlay(rle, pDealer.getPlayerID());
